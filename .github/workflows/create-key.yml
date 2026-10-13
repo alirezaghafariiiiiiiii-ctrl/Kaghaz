@@ -1,0 +1,32 @@
+name: Create Key
+
+on:
+  workflow_dispatch:
+
+jobs:
+  key:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Generate keystore
+        env:
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          test -n "$KEY_PASSWORD" || { echo "KEY_PASSWORD secret is empty"; exit 1; }
+          keytool -genkeypair -v -keystore keystore.jks -storetype PKCS12 \
+            -alias paperbird -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass "$KEY_PASSWORD" -keypass "$KEY_PASSWORD" \
+            -dname "CN=Paper Bird, O=Paper Bird, C=IR"
+          base64 -w 0 keystore.jks > keystore.b64.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paperbird-keystore
+          path: |
+            keystore.jks
+            keystore.b64.txt
+          retention-days: 3
